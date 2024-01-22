@@ -1,22 +1,25 @@
 'use client'
-
-// Import necessary modules and components
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Footer from "./components/Footer";
 import TextField from "./components/TextField";
-import Modal from "./components/common/Model";
 import EditorSidebar from "./components/EditorSidebar";
 import CustomButton from "./components/common/CustomButton";
 import ImageSection from "./components/ImageSection";
-import { DndContext, DragEndEvent, useDraggable, useDroppable } from "@dnd-kit/core";
+import { DndContext, closestCenter, useDraggable } from "@dnd-kit/core";
 import { Editor } from "./text-editor";
-import CombineComponent from "./components/CombineComponent";
-import DragAndDrop from "./components/CombineComponent";
+import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import Modal from "./components/common/Model";
+import { DraggableComponent } from "./components/DraggableComponent";
 
+enum SectionType {
+  EDITOR = 'EDITOR',
+  IMAGE = 'IMAGE',
+}
 
 interface EditorItem {
   type: 'EDITOR';
   index: number;
+  id: string;
 }
 
 interface ImageItem {
@@ -24,6 +27,7 @@ interface ImageItem {
   index: number;
   image: string;
   backgroundColor: string;
+  id: string;
 }
 
 const Home: React.FC = React.memo(() => {
@@ -33,23 +37,27 @@ const Home: React.FC = React.memo(() => {
   const [backgroundColors, setBackgroundColors] = useState<string[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedSectionType, setSelectedSectionType] = useState<string | null>(null);
+  const [combinedSections, setCombinedSections] = useState<(EditorItem | ImageItem)[]>([]);
 
+  const handleImageClick = (index: number) => {
+    const newSections = [...combinedSections];
+    const editorIndex = newSections.findIndex((section) => section.type === SectionType.EDITOR);
 
-  const [isEditorHovered, setIsEditorHovered] = useState<boolean[]>(Array(editorCount).fill(false));
-  const [isImageHovered, setIsImageHovered] = useState<boolean[]>([]);
-  const [isHoveredAddEditor, setIsHoveredAddEditor] = useState(false);
-  const [isHoveredAddButton, setIsHoveredAddButton] = useState(false);
-
+    if (editorIndex !== -1 && editorIndex !== index) {
+      [newSections[editorIndex], newSections[index]] = [newSections[index], newSections[editorIndex]];
+      setCombinedSections(newSections);
+    }
+    setSelectedImageIndex(index);
+    openSidebar();
+  };
 
   const openSidebar = () => {
     setIsSidebarOpen(true);
   };
+
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [inputText, setInputText] = useState<string>('');
-  const handleImageClick = (index: number) => {
-    setSelectedImageIndex(index);
-    openSidebar();
-  };
+
   const handleBackgroundChange = (color: string) => {
     if (selectedImageIndex !== null) {
       const updatedColors = [...backgroundColors];
@@ -57,6 +65,7 @@ const Home: React.FC = React.memo(() => {
       setBackgroundColors(updatedColors);
     }
   };
+
   const openModal = () => {
     setIsModalOpen(true);
   };
@@ -65,11 +74,8 @@ const Home: React.FC = React.memo(() => {
     setIsModalOpen(false);
   };
 
-
-
   const addEditor = () => {
     setEditorCount(prevCount => prevCount + 1);
-    setIsEditorHovered(prevState => [...prevState, false]);
     closeModal();
   };
 
@@ -79,138 +85,118 @@ const Home: React.FC = React.memo(() => {
       reader.onloadend = () => {
         setUploadedImages(prevImages => [...prevImages, reader.result as string]);
         setBackgroundColors(prevColors => [...prevColors, 'transparent']);
-        setIsImageHovered(prevState => [...prevState, false]);
       };
       reader.readAsDataURL(file);
     }
     closeModal();
   };
+
   const addNewEditorSection = () => {
     setEditorCount(prevCount => prevCount + 1);
-    setIsEditorHovered(prevState => [...prevState, false]);// Reset hover state for the new editor
   };
 
   const deleteEditorSection = (indexToDelete: number) => {
     setEditorCount(prevCount => prevCount - 1);
-    const updatedEditorHoverState = [...isEditorHovered];
-    updatedEditorHoverState.splice(indexToDelete, 1);
-    setIsEditorHovered(updatedEditorHoverState);
   };
 
   const addNewImageSection = () => {
     const newImage = uploadedImages[uploadedImages.length - 1];
     setUploadedImages(prevImages => [...prevImages, newImage]);
     setBackgroundColors(prevColors => [...prevColors, 'transparent']);
-    setIsImageHovered(prevState => [...prevState, false]); // Reset hover state for the new image
   };
 
   const deleteImageSection = (indexToDelete: number) => {
     setUploadedImages(prevImages => prevImages.filter((_, index) => index !== indexToDelete));
     setBackgroundColors(prevColors => prevColors.filter((_, index) => index !== indexToDelete));
-    const updatedImageHoverState = [...isImageHovered];
-    updatedImageHoverState.splice(indexToDelete, 1);
-    setIsImageHovered(updatedImageHoverState);
   };
 
-  const combinedSections: (EditorItem | ImageItem)[] = [
-    ...Array(editorCount).fill(2).map((_, index) => ({
-      type: 'EDITOR',
-      index,
-    }) as EditorItem),
-    ...uploadedImages.map((image, index) => ({
-      type: 'IMAGE',
-      index,
-      image,
-      backgroundColor: backgroundColors[index],
-    }) as ImageItem),
-  ];
-  console.log(combinedSections)
+  const onDragEnd = (event: any) => {
+    const { active, over } = event;
 
-  const editorSections: JSX.Element[] = [];
-  const imageSections: JSX.Element[] = [];
-
-  combinedSections.forEach((section, index) => {
-    if (section.type === 'EDITOR') {
-      editorSections.push(
-        <div
-          key={index}
-          className="relative w-[840px] m-auto"
-          onMouseEnter={() =>
-            setIsEditorHovered((prevState) =>
-              prevState.map((val, i) => (i === section.index ? true : val))
-            )
-          }
-          onMouseLeave={() =>
-            setIsEditorHovered((prevState) =>
-              prevState.map((val, i) => (i === section.index ? false : val))
-            )
-          }
-        >
-          <div
-            className={`absolute`}
-            onMouseEnter={() => setIsHoveredAddEditor(true)}
-            onMouseLeave={() => setIsHoveredAddEditor(false)}
-          >
-            <div className={`flex absolute left-[390px] -top-4 w-8 h-8  z-10 items-center justify-center `}>
-              {isHoveredAddEditor && (
-                <button
-                  className="w-8 h-8"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openModal();
-                  }}
-                >
-                  <img
-                    className="w-full h-full object-contain"
-                    src="/images/add.png"
-                    alt="Button icon"
-                  />
-                </button>
-              )}
-            </div>
-          </div>
-          {isEditorHovered[index] && (
-            <div>
-              <CustomButton position="top-0 left-[0px]" iconSrc="/images/drag.png" />
-              <CustomButton position="top-0 right-5" onClick={addNewEditorSection} iconSrc="/images/copy.png" />
-              <CustomButton position="top-0 right-[-20px]" onDelete={() => deleteEditorSection(index)} iconSrc="/images/delete.png" />
-            </div>
-          )}
-          <Editor text={inputText} setInputText={setInputText} />
-
-        </div>
-
-      );
-    } else if (section.type === 'IMAGE') {
-      const imageItem = section as ImageItem;
-      imageSections.push(
-        <ImageSection
-          key={index}
-          image={imageItem.image}
-          index={imageItem.index}
-          backgroundColor={imageItem.backgroundColor}
-          isImageHovered={isImageHovered[imageItem.index]}
-          handleImageClick={handleImageClick}
-          addNewImageSection={addNewImageSection}
-          deleteImageSection={deleteImageSection}
-          setIsImageHovered={setIsImageHovered}
-          isHoveredAddButton={isHoveredAddButton}
-          setIsHoveredAddButton={setIsHoveredAddButton}
-          openModal={openModal}
-        />
-      );
+    if (!active || !over || active.id === over.id) {
+      return;
     }
-  });
 
+    const updatedSections = [...combinedSections];
+
+    const oldIndex = combinedSections.findIndex((section) => section.id === active.id);
+    const newIndex = combinedSections.findIndex((section) => section.id === over.id);
+
+    const [movedSection] = updatedSections.splice(oldIndex, 1);
+    updatedSections.splice(newIndex, 0, movedSection);
+
+    setCombinedSections(updatedSections);
+  };
+
+  useEffect(() => {
+    const updatedSections = [
+      ...Array(editorCount).fill(0).map((_, index) => ({ type: 'EDITOR', index } as EditorItem)),
+      ...uploadedImages.map((image, index) => ({ type: 'IMAGE', index, image, backgroundColor: backgroundColors[index] } as ImageItem)),
+    ];
+
+    setCombinedSections(updatedSections);
+  }, [editorCount, uploadedImages, backgroundColors]);
 
   return (
     <>
       <div className="App">
         <TextField />
-        <DndContext>
-          {editorSections}
-          {imageSections}
+        <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+          <SortableContext items={combinedSections} strategy={verticalListSortingStrategy}>
+            {combinedSections.map((section, index) => (
+              <DraggableComponent key={section.id} index={index}>
+                {section.type === SectionType.EDITOR ? (
+                  <div
+                    className="relative m-auto"
+                  >
+                    <div
+                      className={`absolute`}
+                    >
+                      <div className={`flex absolute left-[348.5px] -top-4 w-8 h-8 z-10 items-center justify-center`}>
+                        <button
+                          className="w-8 h-8 hover:opacity-100 opacity-0 transition-opacity duration-300 ease-in-out"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openModal();
+                          }}
+                        >
+                          <img
+                            className="w-full h-full object-contain"
+                            src="/images/add.png"
+                            alt="Button icon"
+                          />
+                        </button>
+                      </div>
+
+                    </div>
+                 
+                    <div className="group relative">
+  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-1000 ease-in-out">
+    <CustomButton position="top-0 left-[-40px]" iconSrc="/images/drag.png" />
+    <CustomButton position="top-0 right-[-40px]" onClick={addNewEditorSection} iconSrc="/images/copy.png" />
+    <CustomButton position="top-0 right-[-80px]" onDelete={() => deleteEditorSection(index)} iconSrc="/images/delete.png" />
+  </div>
+  <Editor text={inputText} setInputText={setInputText} />
+</div>
+
+                  </div>
+                ) : (
+                  <ImageSection
+                    image={(section as ImageItem).image}
+                    index={(section as ImageItem).index}
+                    backgroundColor={(section as ImageItem).backgroundColor}
+                    handleImageClick={handleImageClick}
+                    addNewImageSection={addNewImageSection}
+                    deleteImageSection={deleteImageSection}
+                    openModal={openModal}
+
+                  />
+                )}
+              </DraggableComponent>
+            ))}
+          </SortableContext>
         </DndContext>
+
         {isModalOpen && (
           <Modal
             closeModal={closeModal}
@@ -240,5 +226,7 @@ const Home: React.FC = React.memo(() => {
     </>
   );
 });
+
+
 Home.displayName = 'Home';
 export default Home;

@@ -5,13 +5,9 @@ interface ImageSectionProps {
   image: string;
   index: number;
   backgroundColor: string;
-  isImageHovered: boolean;
   handleImageClick: (index: number) => void;
   addNewImageSection: () => void;
   deleteImageSection: (index: number) => void;
-  setIsImageHovered: React.Dispatch<React.SetStateAction<boolean[]>>;
-  isHoveredAddButton: boolean;
-  setIsHoveredAddButton: React.Dispatch<React.SetStateAction<boolean>>;
   openModal: () => void;
   handleClick?: () => void;
 }
@@ -20,13 +16,9 @@ const ImageSection: React.FC<ImageSectionProps> = ({
   image,
   index,
   backgroundColor,
-  isImageHovered,
   handleImageClick,
   addNewImageSection,
   deleteImageSection,
-  setIsImageHovered,
-  isHoveredAddButton,
-  setIsHoveredAddButton,
   openModal,
   handleClick,
 }) => {
@@ -34,60 +26,50 @@ const ImageSection: React.FC<ImageSectionProps> = ({
   return (
     <div
       key={index}
-      className="relative w-[840px] m-auto"
-      onMouseEnter={() =>
-        setIsImageHovered((prevState) =>
-          prevState.map((val, i) => (i === index ? true : val))
-        )
-      }
-      onMouseLeave={() =>
-        setIsImageHovered((prevState) =>
-          prevState.map((val, i) => (i === index ? false : val))
-        )
-      }
+      className="relative m-auto"
+
+
     >
       <div
         className={`absolute`}
-        onMouseEnter={() => setIsHoveredAddButton(true)}
-        onMouseLeave={() => setIsHoveredAddButton(false)}
       >
-        <div className={`flex absolute left-[390px] -top-4 w-8 h-8  z-10 items-center justify-center `}>
-          {isHoveredAddButton && (
-            <button
-              className="w-8 h-8"
-              onClick={() => {
-                openModal();
-              }}
-            >
-              <img
-                className="w-full h-full  object-contain"
-                src="/images/add.png"
-                alt="Button icon"
-              />
-            </button>
-          )}
+        <div className={`flex absolute left-[348.5px] -top-4 w-8 h-8  z-10 items-center justify-center `}>
+
+          <button
+            className="w-8 h-8 hover:opacity-100 opacity-0 transition-opacity duration-300 ease-in-out"
+            onClick={() => {
+              openModal();
+            }}
+          >
+            <img
+              className="w-full h-full  object-contain"
+              src="/images/add.png"
+              alt="Button icon"
+            />
+          </button>
+
         </div>
       </div>
 
-      {isImageHovered && (
-        <div>
+      <div className="group relative">
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-1000 ease-in-out">
           <CustomButton
-            position="top-0 left-[0px]"
+            position="top-0 left-[-40px]"
             iconSrc="/images/drag.png"
             onClick={handleClick}
           />
           <CustomButton
-            position="top-0 right-5"
+            position="top-0 right-[-40px]"
             onClick={addNewImageSection}
             iconSrc="/images/copy.png"
           />
           <CustomButton
-            position="top-0 right-[-20px]"
+            position="top-0 right-[-80px]"
             onDelete={() => deleteImageSection(index)}
             iconSrc="/images/delete.png"
           />
         </div>
-      )}
+
 
       <div
         onClick={() => handleImageClick(index)}
@@ -100,6 +82,8 @@ const ImageSection: React.FC<ImageSectionProps> = ({
           alt={`Uploaded ${index + 1}`}
         />
       </div>
+      </div>
+
     </div>
   );
 };

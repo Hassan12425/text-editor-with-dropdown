@@ -62,34 +62,10 @@ setInputText: React.Dispatch<React.SetStateAction<string>>;
 }
 
 export function Editor({text,setInputText}:EditorProps): JSX.Element | null {
-    const [isToolbarVisible, setIsToolbarVisible] = useState(false);
     const contentEditableRef = useRef<HTMLDivElement | null>(null);
     const [selectedBackgroundColor, setSelectedBackgroundColor] = useState<string>('transparent');
 
-    const handleInputClick = () => {
-        setIsToolbarVisible(true);
-    };
 
-    useEffect(() => {
-        const handleDocumentClick = (event: MouseEvent) => {
-            const toolbar = document.querySelector('.toolbar');
-    
-            if (
-                contentEditableRef.current &&
-                !contentEditableRef.current.contains(event.target as Node) &&
-                toolbar &&
-                !toolbar.contains(event.target as Node)
-            ) {
-                setIsToolbarVisible(false);
-            }
-        };
-    
-        document.addEventListener("click", handleDocumentClick);
-    
-        return () => {
-            document.removeEventListener("click", handleDocumentClick);
-        };
-    }, []);
 
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -108,29 +84,29 @@ export function Editor({text,setInputText}:EditorProps): JSX.Element | null {
     return (
         <LexicalComposer initialConfig={editorConfig}>
  <div className="editor-wrapper">
- {isToolbarVisible && 
+
  <div className="toolbar">
     {/* <ToolbarPlugin openSidebar={openSidebar} /> */}
             <ToolbarPlugin openSidebar={openSidebar} />
 
-  </div>}
+  </div>
             <div className="editor-container"  ref={contentEditableRef}>
    
-          <EditorSidebar
+          {/* <EditorSidebar
         isOpen={isSidebarOpen}
         setIsOpen={setIsSidebarOpen}
         onBackgroundChange={handleBackgroundChange} 
         title='Editor Section'
         ctitle="Color"
 
-        />
+        /> */}
                 <div className="editor-inner " style={{ backgroundColor: selectedBackgroundColor }}>
                     <RichTextPlugin 
-                    contentEditable={<ContentEditable className="editor-input " value={text}  onClick={handleInputClick} />}
+                    contentEditable={<ContentEditable className="editor-input " value={text}   />}
                         placeholder={<Placeholder />}
                         ErrorBoundary={LexicalErrorBoundary}
                     />
-                  <textarea  className="editor-input2"  value={text} onChange={handleInputChange} onClick={handleInputClick}  />
+                  {/* <textarea  className="editor-input2"  value={text} onChange={handleInputChange} onClick={handleInputClick}  /> */}
                   <ListPlugin />
                     <HistoryPlugin />
                     <AutoFocusPlugin />

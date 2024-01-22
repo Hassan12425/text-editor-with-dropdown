@@ -392,9 +392,16 @@ body {
     background: #fff;
     padding: 4px 0 4px 0;
     vertical-align: middle;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease-in-out;
    
   }
-
+  .editor-wrapper:focus-within .toolbar {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  
   
   .toolbar button.toolbar-item {
     border: 0;
