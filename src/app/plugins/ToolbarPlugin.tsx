@@ -1,7 +1,7 @@
 'use client';
 
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CAN_REDO_COMMAND,
   CAN_UNDO_COMMAND,
@@ -13,7 +13,8 @@ import {
   $getSelection,
   $isRangeSelection,
   $createParagraphNode,
-  $getNodeByKey
+  $getNodeByKey,
+  LexicalEditor,
 } from "lexical";
 import { $isLinkNode, TOGGLE_LINK_COMMAND } from "@lexical/link";
 import {
@@ -42,8 +43,6 @@ import {
   getCodeLanguages
 } from "@lexical/code";
 
-
-import {EditorSidebar} from "@/app/components/EditorSidebar"
 const LowPriority = 1;
 
 const supportedBlockTypes = new Set([
@@ -69,11 +68,25 @@ const blockTypeToBlockName = {
   ul: "Bulleted List"
 };
 
+interface SelectProps {
+    onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+    className: string;
+    options: string[];
+    value: string;
+  }
+  
+  interface BlockOptionsDropdownListProps {
+    editor: any; 
+    blockType: string;
+    toolbarRef: React.RefObject<HTMLDivElement>;
+    setShowBlockOptionsDropDown: React.Dispatch<React.SetStateAction<boolean>>;
+  }
+
 function Divider() {
   return <div className="divider" />;
 }
 
-function positionEditorElement(editor, rect) {
+function positionEditorElement(editor:any, rect:any) {
   if (rect === null) {
     editor.style.opacity = "0";
     editor.style.top = "-1000px";
@@ -87,7 +100,7 @@ function positionEditorElement(editor, rect) {
   }
 }
 
-function FloatingLinkEditor({ editor }) {
+function FloatingLinkEditor({ editor }:{editor:LexicalEditor}) {
   const editorRef = useRef(null);
   const inputRef = useRef(null);
   const mouseDownRef = useRef(false);
@@ -112,23 +125,24 @@ function FloatingLinkEditor({ editor }) {
     const nativeSelection = window.getSelection();
     const activeElement = document.activeElement;
 
-    if (editorElem === null) {
-      return;
-    }
+    if (editorElem === null ) {
+        return;
+      }
 
     const rootElement = editor.getRootElement();
     if (
-      selection !== null &&
+      selection !== null && nativeSelection &&
       !nativeSelection.isCollapsed &&
       rootElement !== null &&
       rootElement.contains(nativeSelection.anchorNode)
     ) {
+      if (selection == null) {
       const domRange = nativeSelection.getRangeAt(0);
       let rect;
       if (nativeSelection.anchorNode === rootElement) {
-        let inner = rootElement;
+        let inner:HTMLElement = rootElement;
         while (inner.firstElementChild != null) {
-          inner = inner.firstElementChild;
+          inner = inner.firstElementChild as HTMLElement;
         }
         rect = inner.getBoundingClientRect();
       } else {
@@ -138,7 +152,7 @@ function FloatingLinkEditor({ editor }) {
       if (!mouseDownRef.current) {
         positionEditorElement(editorElem, rect);
       }
-      setLastSelection(selection);
+      setLastSelection(selection);}
     } else if (!activeElement || activeElement.className !== "link-input") {
       positionEditorElement(editorElem, null);
       setLastSelection(null);
@@ -151,7 +165,7 @@ function FloatingLinkEditor({ editor }) {
 
   useEffect(() => {
     return mergeRegister(
-      editor.registerUpdateListener(({ editorState }) => {
+      editor.registerUpdateListener(({ editorState }:any) => {
         editorState.read(() => {
           updateLinkEditor();
         });
@@ -176,9 +190,10 @@ function FloatingLinkEditor({ editor }) {
 
   useEffect(() => {
     if (isEditMode && inputRef.current) {
-      inputRef.current.focus();
+      (inputRef.current as HTMLInputElement).focus();
     }
   }, [isEditMode]);
+  
 
   return (
     <div ref={editorRef} className="link-editor">
@@ -227,7 +242,7 @@ function FloatingLinkEditor({ editor }) {
   );
 }
 
-function Select({ onChange, className, options, value }) {
+function  Select({ onChange, className, options, value }: SelectProps){
   return (
     <select className={className} onChange={onChange} value={value}>
       <option hidden={true} value="" />
@@ -240,7 +255,7 @@ function Select({ onChange, className, options, value }) {
   );
 }
 
-function getSelectedNode(selection) {
+function getSelectedNode(selection:any) {
   const anchor = selection.anchor;
   const focus = selection.focus;
   const anchorNode = selection.anchor.getNode();
@@ -257,33 +272,33 @@ function getSelectedNode(selection) {
 }
 
 function BlockOptionsDropdownList({
-  editor,
-  blockType,
-  toolbarRef,
-  setShowBlockOptionsDropDown
-}) {
-  const dropDownRef = useRef(null);
+    editor,
+    blockType,
+    toolbarRef,
+    setShowBlockOptionsDropDown,
+  }: BlockOptionsDropdownListProps) {
+  const dropDownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const toolbar = toolbarRef.current;
     const dropDown = dropDownRef.current;
-
+  
     if (toolbar !== null && dropDown !== null) {
-      const { top, left } = toolbar.getBoundingClientRect();
-      dropDown.style.top = `${top + 40}px`;
-      dropDown.style.left = `${left}px`;
+      const { top, left } = (toolbar as HTMLDivElement).getBoundingClientRect();
+      (dropDown).style.top = `${top + 40}px`;
+      (dropDown).style.left = `${left}px`;
     }
   }, [dropDownRef, toolbarRef]);
-
+  
   useEffect(() => {
     const dropDown = dropDownRef.current;
     const toolbar = toolbarRef.current;
 
     if (dropDown !== null && toolbar !== null) {
-      const handle = (event) => {
+      const handle = (event:MouseEvent) => {
         const target = event.target;
 
-        if (!dropDown.contains(target) && !toolbar.contains(target)) {
+        if (!dropDown.contains(target as Node) && !toolbar.contains(target as Node)) {
           setShowBlockOptionsDropDown(false);
         }
       };
@@ -418,13 +433,16 @@ function BlockOptionsDropdownList({
     </div>
   );
 }
+interface ToolbarPluginProps {
+    openSidebar: () => void;
+  }
 
-export default function ToolbarPlugin( { openSidebar }) {
+export default function ToolbarPlugin({ openSidebar }: ToolbarPluginProps) {
   const [editor] = useLexicalComposerContext();
   const toolbarRef = useRef(null);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
-  const [blockType, setBlockType] = useState("paragraph");
+  const [blockType, setBlockType] =useState<keyof typeof blockTypeToBlockName>('paragraph');
   const [selectedElementKey, setSelectedElementKey] = useState(null);
   const [showBlockOptionsDropDown, setShowBlockOptionsDropDown] = useState(
     false
@@ -519,7 +537,7 @@ export default function ToolbarPlugin( { openSidebar }) {
 
   const codeLanguges = useMemo(() => getCodeLanguages(), []);
   const onCodeLanguageSelect = useCallback(
-    (e) => {
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
       editor.update(() => {
         if (selectedElementKey !== null) {
           const node = $getNodeByKey(selectedElementKey);
@@ -540,19 +558,23 @@ export default function ToolbarPlugin( { openSidebar }) {
     }
   }, [editor, isLink]);
 
-  const handleColorChange = (colorType, color) => {
-    if (colorType === 'background') {
-      setBackgroundColor(color);
-    } else if (colorType === 'text') {
-      setTextColor(color);
-    }
-  };
+<button
+  disabled={!canUndo}
+  onClick={() => {
+    editor.dispatchCommand(UNDO_COMMAND,undefined);
+  }}
+  className="toolbar-item spaced"
+  aria-label="Undo"
+>
+  <i className="format undo" />
+</button>
+
   return (
     <div className="toolbar" ref={toolbarRef}>
       <button
         disabled={!canUndo}
         onClick={() => {
-          editor.dispatchCommand(UNDO_COMMAND);
+          editor.dispatchCommand(UNDO_COMMAND,undefined);
         }}
         className="toolbar-item spaced"
         aria-label="Undo"
@@ -562,7 +584,7 @@ export default function ToolbarPlugin( { openSidebar }) {
       <button
         disabled={!canRedo}
         onClick={() => {
-          editor.dispatchCommand(REDO_COMMAND);
+          editor.dispatchCommand(REDO_COMMAND,undefined);
         }}
         className="toolbar-item"
         aria-label="Redo"

@@ -38,6 +38,8 @@ const Home: React.FC = React.memo(() => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedSectionType, setSelectedSectionType] = useState<string | null>(null);
   const [combinedSections, setCombinedSections] = useState<(EditorItem | ImageItem)[]>([]);
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
+  const [inputText, setInputText] = useState<string>('');
 
   const handleImageClick = (index: number) => {
     const newSections = [...combinedSections];
@@ -55,8 +57,7 @@ const Home: React.FC = React.memo(() => {
     setIsSidebarOpen(true);
   };
 
-  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
-  const [inputText, setInputText] = useState<string>('');
+
 
   const handleBackgroundChange = (color: string) => {
     if (selectedImageIndex !== null) {
@@ -102,13 +103,23 @@ const Home: React.FC = React.memo(() => {
   const addNewImageSection = () => {
     const newImage = uploadedImages[uploadedImages.length - 1];
     setUploadedImages(prevImages => [...prevImages, newImage]);
-    setBackgroundColors(prevColors => [...prevColors, 'transparent']);
+    setBackgroundColors(prevColors => [...prevColors, 'white']);
   };
 
   const deleteImageSection = (indexToDelete: number) => {
     setUploadedImages(prevImages => prevImages.filter((_, index) => index !== indexToDelete));
     setBackgroundColors(prevColors => prevColors.filter((_, index) => index !== indexToDelete));
   };
+
+  useEffect(() => {
+    const updatedSections = [
+      ...Array(editorCount).fill(0).map((_, index) => ({ type: 'EDITOR', index, id: `editor_${index}` } as EditorItem)),
+      ...uploadedImages.map((image, index) => ({ type: 'IMAGE', index, image, backgroundColor: backgroundColors[index], id: `image_${index}` } as ImageItem)),
+    ];
+
+    setCombinedSections(updatedSections);
+  }, [editorCount, uploadedImages, backgroundColors]);
+
 
   const onDragEnd = (event: any) => {
     const { active, over } = event;
@@ -128,15 +139,9 @@ const Home: React.FC = React.memo(() => {
     setCombinedSections(updatedSections);
   };
 
-  useEffect(() => {
-    const updatedSections = [
-      ...Array(editorCount).fill(0).map((_, index) => ({ type: 'EDITOR', index } as EditorItem)),
-      ...uploadedImages.map((image, index) => ({ type: 'IMAGE', index, image, backgroundColor: backgroundColors[index] } as ImageItem)),
-    ];
-
-    setCombinedSections(updatedSections);
-  }, [editorCount, uploadedImages, backgroundColors]);
-
+  const handleContentChange = (newContent: string) => {
+    setInputText(newContent);
+  };
   return (
     <>
       <div className="App">
@@ -144,7 +149,7 @@ const Home: React.FC = React.memo(() => {
         <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={combinedSections} strategy={verticalListSortingStrategy}>
             {combinedSections.map((section, index) => (
-              <DraggableComponent key={section.id} index={index}>
+              <DraggableComponent key={section.id} index={index} sectionType={section.type}>
                 {section.type === SectionType.EDITOR ? (
                   <div
                     className="relative m-auto"
@@ -152,33 +157,34 @@ const Home: React.FC = React.memo(() => {
                     <div
                       className={`absolute`}
                     >
-                      <div className={`flex absolute left-[348.5px] -top-4 w-8 h-8 z-10 items-center justify-center`}>
-                        <button
-                          className="w-8 h-8 hover:opacity-100 opacity-0 transition-opacity duration-300 ease-in-out"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openModal();
-                          }}
-                        >
-                          <img
-                            className="w-full h-full object-contain"
-                            src="/images/add.png"
-                            alt="Button icon"
-                          />
-                        </button>
+                      <div className="relative  w-[729px] border-double border z-20 border-transparent cursor-pointer group">
+                        <div className="absolute left-[348.5px] -top-4 w-8 h-8 z-10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-in-out">
+                          <button
+                            className="w-8 h-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openModal();
+                            }}
+                          >
+                            <img
+                              className="w-full h-full object-contain"
+                              src="/images/add.png"
+                              alt="Button icon"
+                            />
+                          </button>
+                        </div>
                       </div>
 
-                    </div>
-                 
-                    <div className="group relative">
-  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-1000 ease-in-out">
-    <CustomButton position="top-0 left-[-40px]" iconSrc="/images/drag.png" />
-    <CustomButton position="top-0 right-[-40px]" onClick={addNewEditorSection} iconSrc="/images/copy.png" />
-    <CustomButton position="top-0 right-[-80px]" onDelete={() => deleteEditorSection(index)} iconSrc="/images/delete.png" />
-  </div>
-  <Editor text={inputText} setInputText={setInputText} />
-</div>
 
+                    </div>
+
+                    <div className="group relative">
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-1000 ease-in-out">
+                        <CustomButton position="top-0 right-[-40px]" onClick={addNewEditorSection} iconSrc="/images/copy.png" />
+                        <CustomButton position="top-0 right-[-80px]" onDelete={() => deleteEditorSection(index)} iconSrc="/images/delete.png" />
+                      </div>
+                      <Editor onContentChange={handleContentChange} initialContent={inputText} />
+                    </div>
                   </div>
                 ) : (
                   <ImageSection

@@ -25,18 +25,14 @@ const ImageSection: React.FC<ImageSectionProps> = ({
 
   return (
     <div
-      key={index}
-      className="relative m-auto"
-
-
-    >
+      key={index} className="relative m-auto">
       <div
         className={`absolute`}
       >
-        <div className={`flex absolute left-[348.5px] -top-4 w-8 h-8  z-10 items-center justify-center `}>
-
+        <div className="relative  w-[729px] border-double border z-20 border-transparent cursor-pointer group">
+                        <div className="absolute left-[348.5px] -top-4 w-8 h-8 z-10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-in-out">
           <button
-            className="w-8 h-8 hover:opacity-100 opacity-0 transition-opacity duration-300 ease-in-out"
+            className="w-8 h-8 "
             onClick={() => {
               openModal();
             }}
@@ -49,15 +45,11 @@ const ImageSection: React.FC<ImageSectionProps> = ({
           </button>
 
         </div>
+        </div>
       </div>
 
       <div className="group relative">
         <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-1000 ease-in-out">
-          <CustomButton
-            position="top-0 left-[-40px]"
-            iconSrc="/images/drag.png"
-            onClick={handleClick}
-          />
           <CustomButton
             position="top-0 right-[-40px]"
             onClick={addNewImageSection}
@@ -71,17 +63,18 @@ const ImageSection: React.FC<ImageSectionProps> = ({
         </div>
 
 
-      <div
-        onClick={() => handleImageClick(index)}
-        className="w-[729px] m-auto  bg-white border border-double border-blue-500"
-        style={{ backgroundColor }}
-      >
-        <img
-          className="h-72 my-10 w-[450px] mx-auto"
-          src={image}
-          alt={`Uploaded ${index + 1}`}
-        />
-      </div>
+        <div
+  onClick={() => handleImageClick(index)}
+  className="w-[729px] m-auto bg-white border border-double transition-all hover:border-2 hover:border-blue-500 "
+  style={{ backgroundColor }}
+>
+  <img
+    className="h-72 my-10 w-[450px] mx-auto"
+    src={image}
+    alt={`Uploaded ${index + 1}`}
+  />
+</div>
+
       </div>
 
     </div>

@@ -9,10 +9,9 @@ import { CodeHighlightNode, CodeNode } from "@lexical/code";
 import { AutoLinkNode, LinkNode } from "@lexical/link";
 import { TRANSFORMERS } from "@lexical/markdown";
 
-import TreeViewPlugin from "@/app/plugins/TreeViewPlugin";
-import ToolbarPlugin from "@/app/plugins/ToolbarPlugin";
+
+
 import AutoLinkPlugin from "@/app/plugins/AutoLinkPlugin";
-import CodeHighlightPlugin from "@/app/plugins/CodeHighlightPlugin";
 
 
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
@@ -29,97 +28,118 @@ import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import LexicalErrorBoundary from "@lexical/react/LexicalErrorBoundary";
 import ExampleTheme from "@/app/themes/ExampleTheme";
 import EditorSidebar from "./components/EditorSidebar";
-function Placeholder() {
-    return <div className="editor-placeholder"></div>;
-}
-const editorConfig = {
-    theme: ExampleTheme,
-    namespace: "daily-standup-editor",
-    onError(error: unknown) {
-        throw error;
-    },
-    // Any custom nodes go here
-    nodes: [
-        HeadingNode,
-        ListNode,
-        ListItemNode,
-        QuoteNode,
-        CodeNode,
-        CodeHighlightNode,
-        TableNode,
-        TableCellNode,
-        TableRowNode,
-        AutoLinkNode,
-        LinkNode
-    ],
-};
+import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
+import CodeHighlightPlugin from "./plugins/CodeHighlightPlugin";
+import ToolbarPlugin from "./plugins/ToolbarPlugin";
+
 interface EditorProps {
-  text?: string;
-//   setText: (newText: string) => void; 
-setInputText: React.Dispatch<React.SetStateAction<string>>;
 
-
+  initialContent?: string;
+  initialBackgroundColor?: string;
+  onContentChange?: (newContent: string, newBackgroundColor: string) => void;
 }
 
-export function Editor({text,setInputText}:EditorProps): JSX.Element | null {
-    const contentEditableRef = useRef<HTMLDivElement | null>(null);
-    const [selectedBackgroundColor, setSelectedBackgroundColor] = useState<string>('transparent');
+
+function Placeholder() {
+  return <div className="editor-placeholder">Enter Some Text.......</div>;
+}
+const EMPTY_CONTENT = '{"root":{"children":[{"children":[],"direction":null,"format":"","indent":0,"type":"paragraph","version":1}],"direction":null,"format":"","indent":0,"type":"root","version":1}}';
 
 
 
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+export function Editor({ initialContent, initialBackgroundColor, onContentChange }: EditorProps): JSX.Element | null {
+  const contentEditableRef = useRef<HTMLDivElement | null>(null);
+  const [selectedBackgroundColor, setSelectedBackgroundColor] = useState<string>('white');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [content, setContent] = useState<string>(initialContent || '');
+  const onChange = (editorState: any) => {
+    editorState.read(() => {
+      const json = editorState.toJSON();
+      const jsonString = JSON.stringify(json);
+      setContent(jsonString);
 
-    const openSidebar = () => {
-      setIsSidebarOpen(true);
-    };
-    
+
+      if (onContentChange) {
+        onContentChange(jsonString, selectedBackgroundColor);
+      }
+
+      console.log(jsonString);
+    });
+  };
+
+  const openSidebar = () => {
+    setIsSidebarOpen(true);
+  };
+
   const handleBackgroundChange = (selectedColor: string) => {
-   
     setSelectedBackgroundColor(selectedColor);
   };
-  const handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInputText(event.target.value);
+
+  const editorConfig = {
+    theme: ExampleTheme,
+    namespace: "MyEditor",
+    editorState: initialContent || EMPTY_CONTENT,
+    onError(error: unknown) {
+      throw error;
+    },
+
+    // Any custom nodes go here
+    nodes: [
+      HeadingNode,
+      ListNode,
+      ListItemNode,
+      QuoteNode,
+      CodeNode,
+      CodeHighlightNode,
+      TableNode,
+      TableCellNode,
+      TableRowNode,
+      AutoLinkNode,
+      LinkNode
+    ],
   };
 
-    return (
-        <LexicalComposer initialConfig={editorConfig}>
- <div className="editor-wrapper">
+  return (
+    <LexicalComposer initialConfig={editorConfig}>
+      <div className="editor-wrapper">
+        <span className="toolbar">
+          <ToolbarPlugin openSidebar={openSidebar} />
+        </span>
+        <div className="editor-container" ref={contentEditableRef}>
+          <div className="editor-inner " style={{ backgroundColor: selectedBackgroundColor }}>
+            <RichTextPlugin
+              contentEditable={<ContentEditable className="editor-input " />}
+              placeholder={<Placeholder />}
+              ErrorBoundary={LexicalErrorBoundary}
+            />
 
- <div className="toolbar">
-    {/* <ToolbarPlugin openSidebar={openSidebar} /> */}
-            <ToolbarPlugin openSidebar={openSidebar} />
+            <OnChangePlugin onChange={onChange} />
+            <ListPlugin />
+            
+            <HistoryPlugin />
+            <AutoFocusPlugin />
+            <CodeHighlightPlugin />
+            <LinkPlugin />
+            <TabIndentationPlugin />
+            <AutoLinkPlugin />
+            <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
 
-  </div>
-            <div className="editor-container"  ref={contentEditableRef}>
-   
-          {/* <EditorSidebar
-        isOpen={isSidebarOpen}
-        setIsOpen={setIsSidebarOpen}
-        onBackgroundChange={handleBackgroundChange} 
-        title='Editor Section'
-        ctitle="Color"
+          </div>
+        </div>
+      </div>
+      {isSidebarOpen ? (
+        <EditorSidebar
+          isOpen={isSidebarOpen}
+          setIsOpen={setIsSidebarOpen}
+          onBackgroundChange={handleBackgroundChange}
+          title="Editor Section"
+          ctitle="Color"
+        />
+      ) : (
+        <></>
+      )}
 
-        /> */}
-                <div className="editor-inner " style={{ backgroundColor: selectedBackgroundColor }}>
-                    <RichTextPlugin 
-                    contentEditable={<ContentEditable className="editor-input " value={text}   />}
-                        placeholder={<Placeholder />}
-                        ErrorBoundary={LexicalErrorBoundary}
-                    />
-                  {/* <textarea  className="editor-input2"  value={text} onChange={handleInputChange} onClick={handleInputClick}  /> */}
-                  <ListPlugin />
-                    <HistoryPlugin />
-                    <AutoFocusPlugin />
-                    <CodeHighlightPlugin />
-                    <LinkPlugin />
-                    <TabIndentationPlugin />
-                    <AutoLinkPlugin />
-                    <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
-                 
-                    </div>
-                </div>
-                </div>
-           
-        </LexicalComposer>
-    );
+
+    </LexicalComposer>
+  );
 }

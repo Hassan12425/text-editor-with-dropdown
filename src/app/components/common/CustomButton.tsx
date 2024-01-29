@@ -4,10 +4,11 @@ interface CustomButtonProps {
   iconSrc: string;
   position: string;
   onDelete?: () => void; 
-  onClick?: () => void; // Adding onClick prop
+  onClick?: () => void;
+  className?: string;
 }
 
-const CustomButton: React.FC<CustomButtonProps> = ({ iconSrc, position, onDelete, onClick }) => {
+const CustomButton: React.FC<CustomButtonProps> = ({ iconSrc, position, onDelete, onClick,className }) => {
   const handleButtonClick = () => {
     if (onDelete) {
       onDelete();
@@ -19,10 +20,10 @@ const CustomButton: React.FC<CustomButtonProps> = ({ iconSrc, position, onDelete
 
   return (
     <div
-      className={`absolute z-10 ${position} w-8 h-8 flex items-center justify-center`}
+    className={`absolute z-10 ${position} w-8 h-8 flex items-center justify-center ${className} `}
       onClick={handleButtonClick} 
     >
-      <div className="w-full h-full bg-white rounded-full overflow-hidden flex items-center justify-center cursor-pointer">
+      <div className="w-full h-full bg-white  rounded-full overflow-hidden flex items-center justify-center  ">
         <img
           className="w-5 h-5 object-contain"
           src={iconSrc}
